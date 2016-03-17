@@ -281,7 +281,7 @@ describe('/articles', function () {
         .end(function (err, res) {
           if (err) return done(err);
           let data = res.body;
-          console.log(data.length);
+
           data.length.should.be.exactly(5);
           done();
         });
