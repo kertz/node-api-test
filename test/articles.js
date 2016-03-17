@@ -18,14 +18,16 @@ const Article = require('../models/article');
 
 describe('/articles', function () {
   before(function() {
-    mongoose.connection.db.dropCollection(Article.collection.name, function(err, result) {
-      if (err) {
-        console.log(err);
+    Article.db.db.dropDatabase(function(error, result) {
+      if (error) {
+        console.log(error);
+        done();
       }
+      done();
     });
   });
   
-  let article = { title: 'A test todo', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds.\r\rAnother paragraph here separated by two carriage returns.\r\n\r\nAnd then we have another line separated by two CR+LF." };
+  let article = { title: 'A test article', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds.\r\rAnother paragraph here separated by two carriage returns.\r\n\r\nAnd then we have another line separated by two CR+LF." };
     
   describe('POST /articles', function() {
     it('should create a new article resource and respond with the resource in JSON', function(done) {
@@ -232,5 +234,106 @@ describe('/articles', function () {
           done();
         });
     });
+  });
+  
+  describe('GET /articles', function() {
+    // Let's first create a few articles so that we can test the GET /articles endpoint
+    
+    let articles = [
+      { title: 'Test article one', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds." },
+      { title: 'Test article two', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds." },
+      { title: 'Test article three', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds." },
+      { title: 'Test article four', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds." },
+      { title: 'Test article five', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds." },
+      { title: 'Test article six', text: "This is a text paragraph.\n\nThis is another text paragraph separated by two line feeds." }
+    ];
+    
+    articles.forEach(function (tempArticle) {
+      it('should create a new article resource and respond with the resource in JSON', function(done) {
+        request(app)
+          .post('/articles')
+          .set('Accept', 'application/json')
+          .send(tempArticle)
+          .expect('Content-Type', /json/)
+          .expect(201)
+          .end(function(err, res) {
+            if (err) return done(err);
+            
+            let data = res.body;
+            let keys = ['id', 'title', 'text', 'annotations', 'created_at', 'updated_at'];
+            keys.forEach(function (key, index) {
+              data.should.have.property(key);
+            });
+
+            data.title.should.be.exactly(tempArticle.title).and.be.a.String();
+            data.text.should.be.exactly(tempArticle.text).and.be.a.String();
+            data.annotations.should.eql([]);
+
+            article = res.body;
+            done();
+          });
+      });
+    });
+    
+    it('should respond with the an array of 5 articles in JSON', function(done) {
+      request(app)
+        .get('/articles/')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function (err, res) {
+          if (err) return done(err);
+          let data = res.body;
+          console.log(data.length);
+          data.length.should.be.exactly(5);
+          done();
+        });
+    });
+    
+    it('should respond with the an array of 7 articles in JSON', function(done) {
+      request(app)
+        .get('/articles?limit=7')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function (err, res) {
+          if (err) return done(err);
+          let data = res.body;
+          console.log(data.length);
+          data.length.should.be.exactly(7);
+          data.forEach(function (d) {
+            should.exist(d.id);
+            should.exist(d.text);
+            should.exist(d.created_at);
+            should.exist(d.updated_at);
+            should.not.exist(d.annotaions);
+          });
+          done();
+        });
+    });
+    
+    it('should respond with the an array of 7 articles in JSON', function(done) {
+      request(app)
+        .get('/articles?limit=7')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function (err, res) {
+          if (err) return done(err);
+          let data = res.body;
+          console.log(data.length);
+          data.length.should.be.exactly(7);
+          data.forEach(function (d) {
+            should.exist(d.id);
+            should.exist(d.text);
+            should.exist(d.created_at);
+            should.exist(d.updated_at);
+            should.not.exist(d.annotaions);
+          });
+          done();
+        });
+    });
+    
+    //TODO: Write tests for since_id and make sure the items are in correct order
   });
 });
