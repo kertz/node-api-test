@@ -17,13 +17,10 @@ const app = require('../app');
 const Article = require('../models/article');
 
 describe('/articles', function () {
-  before(function() {
-    Article.db.db.dropDatabase(function(error, result) {
-      if (error) {
-        console.log(error);
+  before(function(done) {
+    mongoose.connection.collections[Article.collection.name].drop( function(err) {
+        console.log('Cleaned up the collection `' + Article.collection.name + '` for tests ...');
         done();
-      }
-      done();
     });
   });
   
@@ -298,8 +295,9 @@ describe('/articles', function () {
         .expect(200)
         .end(function (err, res) {
           if (err) return done(err);
+
           let data = res.body;
-          console.log(data.length);
+
           data.length.should.be.exactly(7);
           data.forEach(function (d) {
             should.exist(d.id);
@@ -312,6 +310,8 @@ describe('/articles', function () {
         });
     });
     
+    let sinceId = null;
+    let expectedId = null;
     it('should respond with the an array of 7 articles in JSON', function(done) {
       request(app)
         .get('/articles?limit=7')
@@ -320,9 +320,36 @@ describe('/articles', function () {
         .expect(200)
         .end(function (err, res) {
           if (err) return done(err);
+          
           let data = res.body;
-          console.log(data.length);
+
           data.length.should.be.exactly(7);
+          data.forEach(function (d) {
+            should.exist(d.id);
+            should.exist(d.text);
+            should.exist(d.created_at);
+            should.exist(d.updated_at);
+            should.not.exist(d.annotaions);
+          });
+          sinceId = data[4].id;
+          expectedId = data[5].id;
+          done();
+        });
+    });
+    
+    it('should respond with the an array articles since `sinceId` in JSON', function(done) {
+      request(app)
+        .get('/articles?since_id=' + sinceId)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200)
+        .end(function (err, res) {
+          if (err) return done(err);
+          
+          let data = res.body;
+
+          data.length.should.be.exactly(2);
+          data[0].id.should.be.exactly(expectedId).and.be.a.String();
           data.forEach(function (d) {
             should.exist(d.id);
             should.exist(d.text);
@@ -333,7 +360,5 @@ describe('/articles', function () {
           done();
         });
     });
-    
-    //TODO: Write tests for since_id and make sure the items are in correct order
   });
 });
