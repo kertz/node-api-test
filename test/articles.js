@@ -82,10 +82,8 @@ describe('/articles', function () {
   });
   
   describe('POST /article/:id/annotations', function() {
-    let md5Hash = crypto.createHash('md5');
-    md5Hash.update("This is another text paragraph separated by two line feeds.", 'utf8');
     let annotation = {
-      paragraph: md5Hash.digest('hex'),
+      paragraph: crypto.createHash('md5').update("This is another text paragraph separated by two line feeds.", 'utf8').digest('hex'),
       text: "This is a comment"
     };
         
@@ -106,6 +104,7 @@ describe('/articles', function () {
           });
           
           data.paragraph.should.be.exactly(annotation.paragraph).and.be.a.String();
+          data.annotations.length.should.be.exactly(1);
           data.annotations[0].text.should.be.exactly(annotation.text).and.be.a.String();
           should.exist(data.annotations[0].created_at);
           (data.annotations[0].created_at).should.be.a.Number();
@@ -113,13 +112,9 @@ describe('/articles', function () {
           done();
         });
     });
-  });
-  
-  describe('POST /article/:id/annotations', function() {
-    let md5Hash = crypto.createHash('md5');
-    md5Hash.update("A non existent paragraph.", 'utf8');
-    let annotation = {
-      paragraph: md5Hash.digest('hex'),
+    
+    let badAnnotation = {
+      paragraph: crypto.createHash('md5').update("A non existent paragraph.", 'utf8').digest('hex'),
       text: "This is a comment"
     };
     
@@ -127,7 +122,7 @@ describe('/articles', function () {
       request(app)
         .post('/articles/' + article.id + '/annotations')
         .set('Accept', 'application/json')
-        .send(annotation)
+        .send(badAnnotation)
         .expect('Content-Type', /json/)
         .expect(400)
         .end(function(err, res) {
@@ -139,10 +134,7 @@ describe('/articles', function () {
           done();
         });
     });
-  });
-  
-  
-  describe('GET /articles/:id', function() {
+    
     it('should respond with the json resource that contains the annotations', function(done) {
       request(app)
         .get('/articles/' + article.id)
@@ -168,6 +160,74 @@ describe('/articles', function () {
           data.annotations[0].annotations[0].text.should.be.exactly(annotation.text);
           should.exist(data.annotations[0].annotations[0].created_at);
           data.annotations[0].annotations[0].created_at.should.be.a.Number();
+          
+          done();
+        });
+    });
+    
+    let anotherAnnotation = {
+      paragraph: crypto.createHash('md5').update("And then we have another line separated by two CR+LF.", 'utf8').digest('hex'),
+      text: "This is another comment"
+    };
+        
+    it('should add another annotation to the article resource and respond with the annotations for the paragraph', function(done) {
+      request(app)
+        .post('/articles/' + article.id + '/annotations')
+        .set('Accept', 'application/json')
+        .send(anotherAnnotation)
+        .expect('Content-Type', /json/)
+        .expect(201)
+        .end(function(err, res) {
+          if (err) return done(err);
+          
+          let data = res.body;
+          let keys = ['paragraph', 'annotations'];
+          keys.forEach(function (key, index) {
+            data.should.have.property(key);
+          });
+          
+          data.paragraph.should.be.exactly(anotherAnnotation.paragraph).and.be.a.String();
+          data.annotations.length.should.be.exactly(1);
+          data.annotations[0].text.should.be.exactly(anotherAnnotation.text).and.be.a.String();
+          should.exist(data.annotations[0].created_at);
+          (data.annotations[0].created_at).should.be.a.Number();
+          
+          done();
+        });
+    });
+    
+    let anotherAnnotationOnExistingParagraph = {
+      paragraph: crypto.createHash('md5').update("And then we have another line separated by two CR+LF.", 'utf8').digest('hex'),
+      text: "This is a new comment on existing paragraph"
+    };
+        
+    it('should add another annotation to the article resource and respond with the annotations for the paragraph', function(done) {
+      request(app)
+        .post('/articles/' + article.id + '/annotations')
+        .set('Accept', 'application/json')
+        .send(anotherAnnotationOnExistingParagraph)
+        .expect('Content-Type', /json/)
+        .expect(201)
+        .end(function(err, res) {
+          if (err) return done(err);
+          
+          let data = res.body;
+          let keys = ['paragraph', 'annotations'];
+          keys.forEach(function (key, index) {
+            data.should.have.property(key);
+          });
+          
+          data.paragraph.should.be.exactly(anotherAnnotationOnExistingParagraph.paragraph).and.be.a.String();
+          data.annotations.length.should.be.exactly(2);
+          // Check if the first annotation that was added exists
+          data.annotations[0].text.should.be.exactly(anotherAnnotation.text).and.be.a.String();
+          should.exist(data.annotations[0].created_at);
+          (data.annotations[0].created_at).should.be.a.Number();
+          
+          // Check if the new annotation that was added exists
+          data.annotations[1].text.should.be.exactly(anotherAnnotationOnExistingParagraph.text).and.be.a.String();
+          should.exist(data.annotations[1].created_at);
+          (data.annotations[1].created_at).should.be.a.Number();
           
           done();
         });
