@@ -2,7 +2,7 @@
 
 Step 1: Clone the repo to your machine
 
-Step 2: Install Node(v5.5 or above) installed from http://nodejs.org/ or Homebrew (http://brew.sh/)
+Step 2: Install Node(v5.5 or above) from http://nodejs.org/ or Homebrew (http://brew.sh/)
 
 Step 3: Install MongoDB from https://www.mongodb.org/ or Homebrew (http://brew.sh/)
 
